@@ -4,6 +4,7 @@
 - Merge nums into the shapes using country codes
 - Draw interactive 3D topographic globe based on filters
 """
+
 import argparse
 import json
 import math
@@ -15,6 +16,8 @@ import pydeck as pdk
 import requests
 
 
+# Default elevation scale
+ELEVATION_SCALE = 150000
 
 # Initialize data
 POP_CSV = Path("data/World Population 1960-2023 by Country.csv")
@@ -115,7 +118,6 @@ def read_continents() -> pd.DataFrame:
 
 
 def make_color(norm_t: float) -> list:
-
     norm_t = max(0.0, min(1.0, float(norm_t)))
 
     r = int(40 + 200 * norm_t)
@@ -140,8 +142,8 @@ def attach_metric_to_geojson(geojson: dict, df_year: pd.DataFrame, metric: str) 
     vmin = float(nz.min()) if len(nz) else 0.0
     vmax = float(nz.max()) if len(nz) else 1.0
 
-    # elevation scaling 
-    elevation_scale = 65000 if metric == "population" else 90000
+    # elevation scaling (this is what makes "height")
+    elevation_scale = ELEVATION_SCALE
     values["elevation"] = values["log_value"] * elevation_scale
 
     # Normalize 0..1 for color
@@ -174,7 +176,12 @@ def attach_metric_to_geojson(geojson: dict, df_year: pd.DataFrame, metric: str) 
 
 
 def main():
+    # parser 1st then add arguments
     parser = argparse.ArgumentParser(description="3D globe extruded by population or GDP per capita.")
+
+    # add elev flag so u can crank mountains up/down without touching code
+    parser.add_argument("--elev", type=float, default=250000, help="Elevation scale (bigger = taller)")
+
     parser.add_argument("--year", type=int, default=2023, help="Year to visualize (e.g. 2023)")
     parser.add_argument(
         "--metric",
@@ -188,7 +195,12 @@ def main():
         help="Filter by continent (e.g. Europe, Asia, Africa, Americas, Oceania) or All",
     )
     parser.add_argument("--out", default="globe.html", help="Output HTML filename")
+
     args = parser.parse_args()
+
+    # apply the CLI elev into the global scaling variable
+    global ELEVATION_SCALE
+    ELEVATION_SCALE = args.elev
 
     # Load CSVs
     pop = read_population()
@@ -206,10 +218,10 @@ def main():
     # Filter by year
     df_year = df[df["year"] == args.year].copy()
 
-    # 5) Download borders
+    # Download borders
     geojson = download_geojson()
 
-    # 6) Attach value/elevation/color 2 GeoJSON 
+    # Attach value/elevation/color 2 GeoJSON 
     geojson = attach_metric_to_geojson(geojson, df_year, metric=args.metric)
 
     # 3D layer
@@ -220,7 +232,7 @@ def main():
         stroked=True,       # borders
         filled=True,        # fill 
         extruded=True,      # raised
-        wireframe=True,     
+        wireframe=True,
         get_fill_color="properties.fill_color",
         get_elevation="properties.elevation",
         get_line_color=[30, 30, 30, 160],
@@ -235,20 +247,20 @@ def main():
         "style": {"backgroundColor": "rgba(20,20,20,0.85)", "color": "white"},
     }
 
-    # Camera view
-    view_state = pdk.ViewState(latitude=15, longitude=0, zoom=0.7, pitch=45)
+    # Camera view (more pitch + zoom so height is visible)
+    view_state = pdk.ViewState(latitude=15, longitude=0, zoom=1.2, pitch=65)
 
     # Create the deck.gl scene w polygons
     deck = pdk.Deck(
         layers=[layer],
         initial_view_state=view_state,
         tooltip=tooltip,
-        views=[pdk.View(type="GlobeView")],
-        map_style=None,  
+        views=[pdk.View(type="MapView", controller=True)],
+        map_style=None,
     )
 
-    # Make HTML
-    deck.to_html(args.out, open_browser=False)
+    # Make HTML (offline=True so no CDN weirdness)
+    deck.to_html(args.out, open_browser=False, offline=True)
 
     print("\nDone!")
     print(f"  Wrote: {args.out}")
