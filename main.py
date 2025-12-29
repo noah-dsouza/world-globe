@@ -138,13 +138,6 @@ def read_continents() -> pd.DataFrame:
 
 
 def parse_languages_cell(cell: str) -> list[str]:
-    """
-    This dataset's language column is a big string like:
-      "English, Spanish"
-      "Arabic; French"
-      "Portuguese / Spanish"
-    We'll split on common delimiters and normalize.
-    """
     if not isinstance(cell, str):
         return []
     s = cell.strip()
