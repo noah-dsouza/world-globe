@@ -1,8 +1,9 @@
 # 🌍 World Globe Dashboard
 
-Interactive 3D visualization of global socioeconomic data at the country level.
+Interactive 3D visualization of global socioeconomic data built with **Python, pandas, NumPy**, and **Three.js (globe.gl)**.
 
-This project renders a fully rotatable globe where countries can be filtered and extruded by **population**, **GDP per capita**, and **languages spoken**, with live interaction and no page reloads.
+This project processes real-world datasets using Python and renders them into a fully rotatable, browser-based 3D globe where countries can be filtered and extruded by **population**, **GDP per capita**, and **languages spoken**, with live interaction and no page reloads.
+
 
 ---
 
